@@ -1,1 +1,1 @@
-selene==2.0.0b3
+selene>=2.0.0b3
