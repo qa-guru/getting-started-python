@@ -1,1 +1,2 @@
-selene>=2.0.0b4
+selene>=1.0.2
+pytest==7.3.1
