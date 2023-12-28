@@ -1,5 +1,4 @@
-from selene.support.shared import browser
-from selene import be, have
+from selene import browser, be, have
 
 
 browser.open('https://google.com')
