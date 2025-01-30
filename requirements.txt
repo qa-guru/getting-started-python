@@ -1,1 +1,1 @@
-selene>=2.0.0rc7
+selene==2.0.0rc9
