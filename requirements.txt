@@ -1,2 +1,2 @@
 selene==2.0.0rc9
-pytest
+pytest==8.4.1
