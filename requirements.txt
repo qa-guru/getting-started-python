@@ -1,1 +1,1 @@
-playwright>=1.40
+playwright==1.63.0
