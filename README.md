@@ -1,6 +1,6 @@
 # Getting started with Python for Automated Testing in Browser
 
-This project is an example of a minimal setup in Python to run the simplest «search in google» scenario in a web browser, in three variants: [selenium](google_should_find_selenium.py), [selene](google_should_find_selene.py) and [playwright](google_should_find_playwright.py).
+This project is an example of a minimal setup in Python to run the simplest «search on github» scenario in a web browser, in three variants: [selenium](github_should_find_selenium.py), [selene](github_should_find_selene.py) and [playwright](github_should_find_playwright.py).
 
     pip install -r requirements.txt
     playwright install chromium  # needed for the playwright example only
