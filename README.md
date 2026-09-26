@@ -1,6 +1,6 @@
 # Getting started with Python for Automated Testing in Browser
 
-This project is an example of a minimal setup in Python to run the simplest «search in google» scenario in a web browser, using [selenium](google_should_find_selenium.py).
+This project is an example of a minimal setup in Python to run the simplest «search on github» scenario in a web browser, using [selenium](github_should_find_selenium.py).
 
     pip install -r requirements.txt
 
