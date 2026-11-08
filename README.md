@@ -1,6 +1,6 @@
 # Niffler UI Autotests
 
-[![UI Tests](https://github.com/qa-guru/getting-started-python/actions/workflows/tests.yml/badge.svg)](https://github.com/qa-guru/getting-started-python/actions/workflows/tests.yml)
+[![UI Tests](https://github.com/L4m4w/getting-started-python/actions/workflows/tests.yml/badge.svg)](https://github.com/L4m4w/getting-started-python/actions/workflows/tests.yml)
 
 UI-фреймворк автотестирования для [niffler.qa.guru](https://niffler.qa.guru): Python + pytest + Playwright, Page Object, Allure-отчёты.
 
@@ -45,9 +45,9 @@ test_niffler_registration.py  # тесты регистрации и логау�
 
 ## CI
 
-- GitHub Actions: `.github/workflows/tests.yml` — прогон на push в `main`, PR и вручную (выбор браузера). Allure-отчёт сохраняется как artifact и публикуется в GitHub Pages (ветка `gh-pages`): https://qa-guru.github.io/getting-started-python/
+- GitHub Actions: `.github/workflows/tests.yml` — прогон на push в `master`, PR и вручную (выбор браузера). Allure-отчёт сохраняется как artifact и публикуется в GitHub Pages (ветка `gh-pages`): https://L4m4w.github.io/getting-started-python/
 - Jenkins: `Jenkinsfile`
 
-Для публикации отчёта в форке включи GitHub Pages: **Settings → Pages → Source: Deploy from a branch → gh-pages**. Если репозиторий форкнут — замени `qa-guru/getting-started-python` в бейдже и ссылке на свой `<owner>/<repo>`.
+Для публикации отчёта в форке включи GitHub Pages: **Settings → Pages → Source: Deploy from a branch → gh-pages**. Если репозиторий форкнут — замени `L4m4w/getting-started-python` в бейдже и ссылке на свой `<owner>/<repo>`.
 
 Токены и id чатов хранятся только в GitHub Secrets / Jenkins Credentials — не в коде.

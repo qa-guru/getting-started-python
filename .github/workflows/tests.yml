@@ -2,7 +2,7 @@ name: UI Tests
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -102,7 +102,7 @@ jobs:
           retention-days: 14
 
       - name: Deploy report to GitHub Pages
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
