@@ -26,10 +26,13 @@ pipeline {
         stage('Setup') {
             steps {
                 sh '''
+                    python3 --version
+                    pip config list || true
                     python3 -m venv .venv
                     . .venv/bin/activate
                     pip install --upgrade pip
-                    pip install -r requirements.txt
+                    pip install -r requirements.txt || \
+                        pip install -r requirements.txt -i https://pypi.org/simple
                 '''
             }
         }
