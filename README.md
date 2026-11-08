@@ -50,4 +50,38 @@ test_niffler_registration.py  # тесты регистрации и логау�
 
 Для публикации отчёта в форке включи GitHub Pages: **Settings → Pages → Source: Deploy from a branch → gh-pages**. Если репозиторий форкнут — замени `L4m4w/getting-started-python` в бейдже и ссылке на свой `<owner>/<repo>`.
 
+## Jenkins setup
+
+Пайплайн описан в `Jenkinsfile` (declarative): venv → `playwright install --with-deps` → pytest → публикация Allure-отчёта. Проверено на https://jenkins.qa.guru/ — Jenkinsfile валиден (`Jenkinsfile successfully validated`).
+
+### Требования к ноде
+
+- На https://jenkins.qa.guru/ используются Linux-контейнеры с label `python` (Python 3.14) — Jenkinsfile настроен на `agent { label 'python' }`.
+- Шаг `playwright install ${BROWSER} --with-deps` ставит системные зависимости через `apt`; если на агенте нет root/sudo, выполняется fallback на `playwright install ${BROWSER}` (системные зависимости тогда должны быть в образе агента).
+- На своём Jenkins замени label на нужный (`agent any` или свой label), но убедись, что агент — Linux с Python ≥ 3.11.
+
+### Плагины
+
+- **Pipeline** (workflow-aggregator)
+- **Allure Jenkins Plugin** (Manage Jenkins → Plugins → Allure) — на jenkins.qa.guru уже установлен (есть джобы `*-allure2`/`*-allure3`)
+- **Pipeline: Stage View** — опционально, для удобного отображения
+
+### Настройка Allure CLI
+
+1. **Manage Jenkins → Global Tool Configuration → Allure Commandline → Add Allure Commandline** — на jenkins.qa.guru уже настроена.
+2. Если настраиваешь свой Jenkins: имя — любое (например `allure`), включи **Install automatically** → **Install from Maven Central**, версия `2.46.1`; либо установи Allure на агент вручную и укажи `ALLURE_HOME`.
+
+### Создание job
+
+1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
+2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
+3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chromium/firefox/webkit), `BASE_URL`, `AUTH_URL`.
+
+### Поведение
+
+- Падение тестов → билд `UNSTABLE` (через `catchError`), но Allure-отчёт и артефакты публикуются всегда (`post always`).
+- Архивируются `allure-results/**` всегда и `artifacts/**` (скриншоты/page source) при падении.
+- История билдов: 20, конкурентные запуски запрещены, таймаут — 20 минут.
+
 Токены и id чатов хранятся только в GitHub Secrets / Jenkins Credentials — не в коде.
