@@ -1,26 +1,40 @@
-from selene import browser, have
+import allure
+from playwright.sync_api import expect
 
-def test_success_login():
-    browser.open('https://niffler.qa.guru')
-    browser.element('[id="username"]').type('stas')
-    browser.element('[id="password"]').type('12345')
-    browser.element('[id="login-button"]').click()
+from pages.login_page import LoginPage
 
-    browser.element('[id="spendings"]').should(have.text('History of Spendings'))
-    browser.quit()
+USERNAME = "stas"
+PASSWORD = "12345"
 
-def test_success_login_with_press_enter():
-    browser.open('https://niffler.qa.guru')
-    browser.element('[id="username"]').type('stas')
-    browser.element('[id="password"]').type('12345').press_enter()
 
-    browser.element('[id="spendings"]').should(have.text('History of Spendings'))
-    browser.quit()
+@allure.epic("Niffler")
+@allure.feature("Авторизация")
+class TestLogin:
 
-def test_wrong_credentials():
-    browser.open('https://niffler.qa.guru')
-    browser.element('[id="username"]').type('stas')
-    browser.element('[id="password"]').type('12345sgsrgwr').press_enter()
+    @allure.story("Успешный логин")
+    @allure.severity(allure.severity_level.BLOCKER)
+    @allure.title("Логин с валидными кредами")
+    def test_success_login(self, page):
+        main_page = LoginPage(page).open().login(USERNAME, PASSWORD)
 
-    browser.element('[class="form__error"]').should(have.text('Bad credentials'))
-    browser.quit()
+        with allure.step("Проверить заголовок истории трат"):
+            expect(main_page.spendings_section).to_contain_text("History of Spendings")
+
+    @allure.story("Успешный логин")
+    @allure.severity(allure.severity_level.CRITICAL)
+    @allure.title("Логин с отправкой формы клавишей Enter")
+    def test_success_login_with_press_enter(self, page):
+        main_page = LoginPage(page).open().login_with_enter(USERNAME, PASSWORD)
+
+        with allure.step("Проверить заголовок истории трат"):
+            expect(main_page.spendings_section).to_contain_text("History of Spendings")
+
+    @allure.story("Невалидные креды")
+    @allure.severity(allure.severity_level.NORMAL)
+    @allure.title("Логин с неверным паролем показывает ошибку")
+    def test_wrong_credentials(self, page):
+        login_page = LoginPage(page).open()
+        login_page.fill_username(USERNAME).fill_password("12345sgsrgwr").submit_with_enter()
+
+        with allure.step("Проверить текст ошибки"):
+            expect(login_page.error_message).to_have_text("Bad credentials")

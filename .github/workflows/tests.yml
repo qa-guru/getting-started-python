@@ -1,0 +1,114 @@
+name: UI Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: "Browser engine"
+        required: true
+        default: chromium
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+
+permissions:
+  contents: write # нужен для деплоя отчёта в gh-pages (peaceiris/actions-gh-pages)
+
+env:
+  BASE_URL: https://niffler.qa.guru
+  AUTH_URL: https://auth.niffler.qa.guru
+  HEADLESS: "true"
+  ALLURE_VERSION: "2.46.1"
+  BROWSER: ${{ inputs.browser || 'chromium' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install ${{ env.BROWSER }} --with-deps
+        timeout-minutes: 10
+
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        timeout-minutes: 15
+        run: pytest --browser=${{ env.BROWSER }} --alluredir=allure-results
+
+      - name: Restore Allure history from gh-pages
+        if: always()
+        continue-on-error: true
+        run: |
+          git fetch origin gh-pages:gh-pages || true
+          git worktree add .gh-pages gh-pages 2>/dev/null || true
+          if [ -d .gh-pages/history ]; then
+            cp -r .gh-pages/history allure-results/history
+          fi
+
+      - name: Install Allure CLI
+        if: always()
+        run: |
+          wget -q "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.zip" -O /tmp/allure.zip
+          unzip -q /tmp/allure.zip -d /tmp/allure
+          echo "/tmp/allure/allure-${ALLURE_VERSION}/bin" >> "$GITHUB_PATH"
+        timeout-minutes: 5
+
+      - name: Generate Allure report
+        if: always()
+        run: allure generate allure-results -o allure-report --clean
+        timeout-minutes: 5
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results/
+          retention-days: 30
+
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report/
+          retention-days: 30
+
+      - name: Upload failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-artifacts
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Deploy report to GitHub Pages
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report
+          keep_files: false
+
+      - name: Fail job if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
