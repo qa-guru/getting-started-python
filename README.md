@@ -52,8 +52,10 @@ allure open allure-report
 ```
 conftest.py                 # фикстуры Selenium WebDriver, CLI-опции, attachments на падении
 pages/                      # Page Object: BasePage, LoginPage, MainPage, RegisterPage
-test_niffler_login.py       # тесты авторизации
-test_niffler_registration.py  # тесты регистрации и логаута
+tests/                      # тесты по фичам
+  auth/test_login.py        # авторизация
+  registration/test_registration.py  # регистрация и валидация формы
+  logout/test_logout.py     # выход из аккаунта
 ```
 
 ## CI
