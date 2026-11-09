@@ -41,6 +41,8 @@ class TestLogin:
         login_page.fill_username(USERNAME).fill_password("12345sgsrgwr").submit_with_enter()
 
         with allure.step("Проверить текст ошибки"):
-            wait.until(EC.text_to_be_present_in_element(
-                login_page.error_message, "Неверные учетные данные пользователя"
-            ))
+            # текст ошибки зависит от локали браузера (ru/en)
+            error = wait.until(EC.visibility_of_element_located(login_page.error_message))
+            wait.until(lambda _: error.text.strip() != "")
+            assert error.text in ("Bad credentials", "Неверные учетные данные пользователя"), \
+                f"Unexpected error text: {error.text!r}"
