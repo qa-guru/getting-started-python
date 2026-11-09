@@ -75,7 +75,7 @@ test_niffler_registration.py  # тесты регистрации и логау�
 
 ### Обязательные настройки
 
-- **`SELENOID_CREDENTIALS_ID`** — ID Jenkins Credential типа **Username with password** с логином/паролем от `selenoid.qa.guru`. Пайплайн через `withCredentials` собирает `https://user:pass@selenoid.qa.guru/wd/hub` внутри шага — креды не попадают в код и маскируются в логах.
+- **`SELENOID_CREDENTIALS_ID`** — параметр типа **Credentials**: при запуске выбираешь свой credential (Username with password) с логином/паролем от `selenoid.qa.guru`. Работает и с user-scoped кредами — System-доступ не нужен. Пайплайн через `withCredentials` собирает `https://user:pass@selenoid.qa.guru/wd/hub` внутри шага — креды не попадают в код и маскируются в логах.
 - Remote URL по умолчанию `https://selenoid.qa.guru/wd/hub` (нода QA Guru; `/status` показывает пулы chrome/chromium, `/wd/hub` требует basic-auth). Для локального прогона креды подставляй прямо в URL.
 - Без `SELENIUM_REMOTE_URL` прогон упадёт с ошибкой «Remote mode requested but SELENIUM_REMOTE_URL is not set».
 
@@ -95,7 +95,7 @@ test_niffler_registration.py  # тесты регистрации и логау�
 1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
 2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
 3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
-4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL`, `SELENOID_CREDENTIALS_ID` (ID креденшела, по умолчанию `SELENOID_CREDENTIALS_ID`).
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL` и credential `SELENOID_CREDENTIALS_ID` из выпадающего списка (включая user-scoped).
 
 ### Поведение
 

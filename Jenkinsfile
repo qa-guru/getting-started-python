@@ -14,7 +14,7 @@ pipeline {
         choice(name: 'BROWSER', choices: ['chrome', 'firefox'], description: 'Browser')
         string(name: 'BASE_URL', defaultValue: 'https://niffler.qa.guru', description: 'Base URL of the app under test')
         string(name: 'AUTH_URL', defaultValue: 'https://auth.niffler.qa.guru', description: 'Auth service URL')
-        string(name: 'SELENOID_CREDENTIALS_ID', defaultValue: 'SELENOID_CREDENTIALS_ID', description: 'ID Jenkins Credential (Username with password) для selenoid.qa.guru')
+        credentials(name: 'SELENOID_CREDENTIALS_ID', credentialType: 'Username with password', required: true, description: 'Credential с логином/паролем для selenoid.qa.guru (user-scope тоже виден в списке)')
     }
 
     environment {
