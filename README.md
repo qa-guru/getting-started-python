@@ -9,6 +9,7 @@ UI-фреймворк автотестирования для [niffler.qa.guru](
 ```bash
 pip install -r requirements.txt
 brew install allure   # для генерации отчётов (требуется Java)
+cp .env.example .env  # опционально: локальные настройки (стенд, браузер, Selenoid)
 ```
 
 Установленные браузер и драйвер не требуются настраивать вручную: Selenium Manager сам подберёт драйвер под установленный Chrome/Firefox.
