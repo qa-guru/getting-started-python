@@ -1,7 +1,7 @@
 pipeline {
     // Агент публикует Allure; Python и браузеры запускаются в glibc-контейнере.
     // Нужны Docker CLI, доступ к Docker daemon (плагин Docker Pipeline не требуется).
-    agent { label 'python' }
+    agent { label 'python-python314-jenkins-agent-1' }
 
     options {
         timestamps()
