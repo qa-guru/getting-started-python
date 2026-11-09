@@ -27,7 +27,9 @@ AUTH_URL=https://auth.niffler.qa.guru pytest  # переопределить aut
 ## Запуск через Remote WebDriver (Selenium Grid / Selenoid)
 
 ```bash
-SELENIUM_REMOTE_URL=http://selenoid-host:4444/wd/hub pytest --browser=chrome
+SELENIUM_REMOTE_URL=https://selenoid.qa.guru/wd/hub pytest --browser=chrome
+# с basic-auth, если грид требует логин/пароль:
+SELENIUM_REMOTE_URL=https://user:pass@selenoid.qa.guru/wd/hub pytest --browser=chrome
 # либо явно включить remote-режим:
 SELENIUM_REMOTE=true SELENIUM_REMOTE_URL=http://grid:4444/wd/hub pytest
 ```
@@ -73,12 +75,8 @@ test_niffler_registration.py  # тесты регистрации и логау�
 
 ### Обязательные настройки
 
-- **`SELENIUM_REMOTE_URL`** — адрес Grid/Selenoid (например `http://selenoid:4444/wd/hub`). Задаётся параметром билда или env. Если адрес содержит логин/пароль — не храни его в коде и параметрах: создай **Jenkins Credential** (Secret text) и подставь в `environment` пайплайна:
-  ```groovy
-  environment {
-      SELENIUM_REMOTE_URL = credentials('selenium-remote-url')
-  }
-  ```
+- **`SELENOID_CREDENTIALS_ID`** — ID Jenkins Credential типа **Username with password** с логином/паролем от `selenoid.qa.guru`. Пайплайн через `withCredentials` собирает `https://user:pass@selenoid.qa.guru/wd/hub` внутри шага — креды не попадают в код и маскируются в логах.
+- Remote URL по умолчанию `https://selenoid.qa.guru/wd/hub` (нода QA Guru; `/status` показывает пулы chrome/chromium, `/wd/hub` требует basic-auth). Для локального прогона креды подставляй прямо в URL.
 - Без `SELENIUM_REMOTE_URL` прогон упадёт с ошибкой «Remote mode requested but SELENIUM_REMOTE_URL is not set».
 
 ### Плагины
@@ -97,7 +95,7 @@ test_niffler_registration.py  # тесты регистрации и логау�
 1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
 2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
 3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
-4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL`, `SELENIUM_REMOTE_URL`.
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL`, `SELENOID_CREDENTIALS_ID` (ID креденшела, по умолчанию `SELENOID_CREDENTIALS_ID`).
 
 ### Поведение
 

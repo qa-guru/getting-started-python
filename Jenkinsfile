@@ -14,7 +14,7 @@ pipeline {
         choice(name: 'BROWSER', choices: ['chrome', 'firefox'], description: 'Browser')
         string(name: 'BASE_URL', defaultValue: 'https://niffler.qa.guru', description: 'Base URL of the app under test')
         string(name: 'AUTH_URL', defaultValue: 'https://auth.niffler.qa.guru', description: 'Auth service URL')
-        string(name: 'SELENIUM_REMOTE_URL', defaultValue: '', description: 'Selenium Grid/Selenoid URL, e.g. http://selenoid:4444/wd/hub')
+        string(name: 'SELENOID_CREDENTIALS_ID', defaultValue: 'SELENOID_CREDENTIALS_ID', description: 'ID Jenkins Credential (Username with password) для selenoid.qa.guru')
     }
 
     environment {
@@ -22,9 +22,6 @@ pipeline {
         BASE_URL = "${params.BASE_URL}"
         AUTH_URL = "${params.AUTH_URL}"
         SELENIUM_REMOTE = 'true'
-        // Если URL содержит логин/пароль — вместо параметра используй Credentials:
-        // SELENIUM_REMOTE_URL = credentials('selenium-remote-url')
-        SELENIUM_REMOTE_URL = "${params.SELENIUM_REMOTE_URL}"
         VENV = "${WORKSPACE}/.venv"
     }
 
@@ -46,10 +43,18 @@ pipeline {
                 // catchError: падение тестов -> билд UNSTABLE, но pipeline продолжается
                 // и Allure-отчёт генерируется в post-секции.
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh '''
-                        . .venv/bin/activate
-                        pytest --browser=${BROWSER} --alluredir=allure-results
-                    '''
+                    // Креды подставляются в URL только внутри шага и маскируются в логах
+                    withCredentials([usernamePassword(
+                        credentialsId: "${params.SELENOID_CREDENTIALS_ID}",
+                        usernameVariable: 'SELENOID_USER',
+                        passwordVariable: 'SELENOID_PASS'
+                    )]) {
+                        sh '''
+                            . .venv/bin/activate
+                            export SELENIUM_REMOTE_URL="https://${SELENOID_USER}:${SELENOID_PASS}@selenoid.qa.guru/wd/hub"
+                            pytest --browser=${BROWSER} --alluredir=allure-results
+                        '''
+                    }
                 }
             }
         }
