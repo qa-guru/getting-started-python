@@ -52,17 +52,20 @@ test_niffler_registration.py  # тесты регистрации и логау�
 
 ## Jenkins setup
 
-Пайплайн описан в `Jenkinsfile` (declarative): venv → `playwright install --with-deps` → pytest → публикация Allure-отчёта. Проверено на https://jenkins.qa.guru/ — Jenkinsfile валиден (`Jenkinsfile successfully validated`).
+Пайплайн описан в `Jenkinsfile` (declarative): проверка Docker → установка Python-зависимостей и pytest в официальном контейнере Playwright → публикация Allure на исходном Jenkins-агенте.
 
 ### Требования к ноде
 
-- На https://jenkins.qa.guru/ используются Linux-контейнеры с label `python` (Python 3.14) — Jenkinsfile настроен на `agent { label 'python' }`.
-- Шаг `playwright install ${BROWSER} --with-deps` ставит системные зависимости через `apt`; если на агенте нет root/sudo, выполняется fallback на `playwright install ${BROWSER}` (системные зависимости тогда должны быть в образе агента).
-- На своём Jenkins замени label на нужный (`agent any` или свой label), но убедись, что агент — Linux с Python ≥ 3.11.
+- Jenkinsfile выбирает агент с label `python`. На нём нужны Docker CLI и доступ к работающему Docker daemon. Если Docker недоступен на учебном Jenkins, администратор должен предоставить подходящий агент; при необходимости замени label в Jenkinsfile.
+- Установка зависимостей и тесты выполняются в `mcr.microsoft.com/playwright/python:v1.64.1-noble` (Ubuntu/glibc). Версия образа должна совпадать с `playwright` в `requirements.txt`.
+- Браузеры Chromium, Firefox, WebKit и системные зависимости уже включены в образ; отдельный `playwright install` не нужен.
+- Исходный агент может использовать musl: Python из него для тестов не используется. Для генерации Allure-отчёта на исходном агенте нужны Java и настроенный Allure CLI.
+- Контейнер использует тот же workspace (`reuseNode true`), поэтому Allure-результаты и скриншоты доступны после тестов. Docker daemon должен иметь доступ к workspace агента, в том числе когда сам агент работает в контейнере.
 
 ### Плагины
 
 - **Pipeline** (workflow-aggregator)
+- **Docker Pipeline** (docker-workflow) — обязателен для запуска стадии в Docker
 - **Allure Jenkins Plugin** (Manage Jenkins → Plugins → Allure) — на jenkins.qa.guru уже установлен (есть джобы `*-allure2`/`*-allure3`)
 - **Pipeline: Stage View** — опционально, для удобного отображения
 

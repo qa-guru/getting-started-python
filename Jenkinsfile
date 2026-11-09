@@ -1,5 +1,6 @@
 pipeline {
-    // Агенты jenkins.qa.guru с label 'python' — Linux-контейнеры с Python 3.14.
+    // Агент публикует Allure; Python и браузеры запускаются в glibc-контейнере.
+    // Нужны Docker CLI, доступ к Docker daemon и плагин Docker Pipeline.
     agent { label 'python' }
 
     options {
@@ -19,45 +20,54 @@ pipeline {
         HEADLESS = 'true'
         BASE_URL = "${params.BASE_URL}"
         AUTH_URL = "${params.AUTH_URL}"
-        VENV = "${WORKSPACE}/.venv"
     }
 
     stages {
-        stage('Setup') {
+        stage('Docker availability') {
             steps {
                 sh '''
-                    uname -a
-                    python3 --version
-                    python3 -c "import platform; print(platform.platform()); print('libc:', platform.libc_ver()); print('arch:', platform.machine())"
-                    ldd --version 2>&1 | head -1 || true
-                    pip config list || true
-                    python3 -m venv .venv
-                    . .venv/bin/activate
-                    pip install --upgrade pip
-                    pip debug --verbose 2>/dev/null | grep -A2 "Compatible tags" | head -8 || true
-                    pip install -r requirements.txt
+                    if ! command -v docker >/dev/null 2>&1; then
+                        echo 'Docker CLI is required on the Jenkins agent to run Playwright.' >&2
+                        exit 1
+                    fi
+                    if ! docker info >/dev/null 2>&1; then
+                        echo 'The Jenkins agent needs access to a running Docker daemon.' >&2
+                        exit 1
+                    fi
                 '''
             }
         }
 
-        stage('Browsers') {
-            steps {
-                sh '''
-                    . .venv/bin/activate
-                    playwright install ${BROWSER} --with-deps || playwright install ${BROWSER}
-                '''
+        stage('Playwright') {
+            agent {
+                docker {
+                    // Версия образа должна совпадать с playwright в requirements.txt.
+                    image 'mcr.microsoft.com/playwright/python:v1.64.1-noble'
+                    args '--init --ipc=host'
+                    reuseNode true
+                }
             }
-        }
+            stages {
+                stage('Setup') {
+                    steps {
+                        sh '''
+                            python3 --version
+                            python3 -m venv .venv
+                            .venv/bin/python -m pip install -r requirements.txt
+                        '''
+                    }
+                }
 
-        stage('Test') {
-            steps {
-                // catchError: падение тестов -> билд UNSTABLE, но pipeline продолжается
-                // и Allure-отчёт генерируется в post-секции.
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh '''
-                        . .venv/bin/activate
-                        pytest --browser=${BROWSER} --alluredir=allure-results
-                    '''
+                stage('Test') {
+                    steps {
+                        // Браузеры и системные зависимости уже включены в образ.
+                        // Падение тестов не мешает публикации Allure на исходном агенте.
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            sh '''
+                                .venv/bin/python -m pytest --browser="${BROWSER}" --alluredir=allure-results
+                            '''
+                        }
+                    }
                 }
             }
         }
