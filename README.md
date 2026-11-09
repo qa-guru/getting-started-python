@@ -70,14 +70,8 @@ test_niffler_registration.py  # тесты регистрации и логау�
 ### Требования к ноде
 
 - На https://jenkins.qa.guru/ используется агент `python-python314-jenkins-agent-1` (Python 3.14, Linux x86_64, musl). Selenium — pure-Python пакет и ставится на musl без проблем (в отличие от Playwright).
-- Браузер на агенте **не** устанавливается — тесты ходят в удалённый Selenium Grid / Selenoid через `webdriver.Remote`.
+- Сейчас пайплайн запускает браузер **локально на агенте** — на нём должен быть установлен Chrome или Firefox (драйвер подберёт Selenium Manager). Если браузера нет, вариант — удалённый запуск: задай в job env `SELENIUM_REMOTE_URL` (например `https://user:pass@selenoid.qa.guru/wd/hub`) — remote-режим включится автоматически. Креды в URL храни через Jenkins Credentials (`withCredentials`), не в коде.
 - На своём Jenkins замени label на нужный (`agent any` или свой label), но убедись, что агент — Linux с Python ≥ 3.11.
-
-### Обязательные настройки
-
-- **`SELENOID_CREDENTIALS_ID`** — параметр типа **Credentials**: при запуске выбираешь свой credential (Username with password) с логином/паролем от `selenoid.qa.guru`. Работает и с user-scoped кредами — System-доступ не нужен. Пайплайн через `withCredentials` собирает `https://user:pass@selenoid.qa.guru/wd/hub` внутри шага — креды не попадают в код и маскируются в логах.
-- Remote URL по умолчанию `https://selenoid.qa.guru/wd/hub` (нода QA Guru; `/status` показывает пулы chrome/chromium, `/wd/hub` требует basic-auth). Для локального прогона креды подставляй прямо в URL.
-- Без `SELENIUM_REMOTE_URL` прогон упадёт с ошибкой «Remote mode requested but SELENIUM_REMOTE_URL is not set».
 
 ### Плагины
 
@@ -95,7 +89,7 @@ test_niffler_registration.py  # тесты регистрации и логау�
 1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
 2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
 3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
-4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL` и credential `SELENOID_CREDENTIALS_ID` из выпадающего списка (включая user-scoped).
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL`.
 
 ### Поведение
 
