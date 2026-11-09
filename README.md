@@ -70,18 +70,19 @@ test_niffler_registration.py  # тесты регистрации и логау�
 ### Требования к ноде
 
 - На https://jenkins.qa.guru/ используется агент `python-python314-jenkins-agent-1` (Python 3.14, Linux x86_64, musl). Selenium — pure-Python пакет и ставится на musl без проблем (в отличие от Playwright).
-- Браузера на musl-агенте нет и быть не может — нужен **remote WebDriver**. Адрес с кредами передаётся через файл `.env` (см. ниже) — так же сделано в рабочих джобах qa.guru.
+- Браузера на musl-агенте нет и быть не может — нужен **remote WebDriver** на `selenoid.qa.guru`. Креды передаются параметром типа Credentials (см. ниже).
 
-### Remote WebDriver через `.env`
+### Обязательные настройки
 
-`conftest.py` читает `.env` (`python-dotenv`) — если в нём задан `SELENIUM_REMOTE_URL`, автоматически включается `webdriver.Remote`. `.env` в `.gitignore`, в репозиторий не коммитится.
+- **`SELENOID_CREDENTIALS_ID`** — параметр типа **Credentials** в джобе: при запуске выбираешь свой credential (**Username with password**: username — логин, password — токен Selenoid). Работает и с user-scoped кредами — System-доступ не нужен. Пайплайн через `withCredentials` собирает `https://user:token@selenoid.qa.guru/wd/hub` внутри шага — креды не попадают в код и маскируются в логах.
 
-1. **Manage Jenkins → Managed files → Add a new Config → Custom file** (или credentials-файл, доступный тебе по правам) — содержимое:
-   ```
-   SELENIUM_REMOTE_URL=https://user:pass@selenoid.qa.guru/wd/hub
-   ```
-2. В джобе: **Build Environment → Provide Configuration files** → выбрать этот файл, target — `.env`. Jenkins положит его в workspace до шага сборки (`Creating/updating file at '.env'`).
-3. Локально то же самое: создай `.env` в корне проекта с той же строкой — `pytest` пойдёт в remote.
+### Remote-режим локально
+
+`conftest.py` читает `.env` (`python-dotenv`) — если в нём задан `SELENIUM_REMOTE_URL`, автоматически включается `webdriver.Remote`. `.env` в `.gitignore`, в репозиторий не коммитится:
+
+```
+SELENIUM_REMOTE_URL=https://user:token@selenoid.qa.guru/wd/hub
+```
 - На своём Jenkins замени label на нужный (`agent any` или свой label), но убедись, что агент — Linux с Python ≥ 3.11.
 
 ### Плагины
@@ -100,7 +101,7 @@ test_niffler_registration.py  # тесты регистрации и логау�
 1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
 2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
 3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
-4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL`.
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL` и credential `SELENOID_CREDENTIALS_ID` из выпадающего списка (включая user-scoped).
 
 ### Поведение
 
