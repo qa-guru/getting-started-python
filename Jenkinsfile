@@ -26,13 +26,16 @@ pipeline {
         stage('Setup') {
             steps {
                 sh '''
+                    uname -a
                     python3 --version
+                    python3 -c "import platform; print(platform.platform()); print('libc:', platform.libc_ver()); print('arch:', platform.machine())"
+                    ldd --version 2>&1 | head -1 || true
                     pip config list || true
                     python3 -m venv .venv
                     . .venv/bin/activate
                     pip install --upgrade pip
-                    pip install -r requirements.txt || \
-                        pip install -r requirements.txt -i https://pypi.org/simple
+                    pip debug --verbose 2>/dev/null | grep -A2 "Compatible tags" | head -8 || true
+                    pip install -r requirements.txt
                 '''
             }
         }
