@@ -68,6 +68,33 @@ pipeline {
                 results: [[path: 'allure-results']]
             ])
             archiveArtifacts artifacts: 'allure-results/**', allowEmptyArchive: true
+            // Секреты — два Secret text в Jenkins Credentials. Если они не
+            // заведены, withCredentials бросит исключение — ловим и пропускаем.
+            script {
+                try {
+                    withCredentials([
+                        string(credentialsId: 'TELEGRAM_TOKEN', variable: 'TELEGRAM_TOKEN'),
+                        string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'TELEGRAM_CHAT_ID')
+                    ]) {
+                        withEnv([
+                            "REPO=${env.JOB_NAME}",
+                            "BRANCH=${env.GIT_BRANCH ?: 'master'}",
+                            "COMMIT=${env.GIT_COMMIT ?: ''}",
+                            "RUN_URL=${env.BUILD_URL}",
+                            "REPORT_URL=${env.BUILD_URL}allure"
+                        ]) {
+                            sh '''
+                                TRIGGER="jenkins build #${BUILD_NUMBER}"
+                                export TRIGGER
+                                . .venv/bin/activate 2>/dev/null || true
+                                python3 notify_telegram.py
+                            '''
+                        }
+                    }
+                } catch (Exception e) {
+                    echo "Telegram notification skipped: ${e.message}"
+                }
+            }
         }
         unsuccessful {
             archiveArtifacts artifacts: 'artifacts/**', allowEmptyArchive: true

@@ -106,6 +106,22 @@ jobs:
           publish_dir: allure-report
           keep_files: false
 
+      # Уведомление идёт после генерации/деплоя отчёта, но до exit 1 —
+      # сообщение уходит и при падении тестов. Без секретов шаг мягко
+      # пропускается (скрипт печатает skip и завершается нулём).
+      - name: Send Telegram notification
+        if: always()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          TRIGGER: ${{ github.event_name }} by ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_URL: https://L4m4w.github.io/getting-started-python/
+        run: python notify_telegram.py
+
       - name: Fail job if tests failed
         if: steps.tests.outcome == 'failure'
         run: exit 1

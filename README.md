@@ -109,4 +109,41 @@ SELENIUM_REMOTE_URL=https://user:token@selenoid.qa.guru/wd/hub
 - Архивируются `allure-results/**` всегда и `artifacts/**` (скриншоты/page source) при падении.
 - История билдов: 20, конкурентные запуски запрещены, таймаут — 20 минут.
 
+## Telegram-уведомления
+
+После каждого прогона `notify_telegram.py` считает статистику из `allure-results/*-result.json` и шлёт сообщение в Telegram — и на успехе, и на падении. Если секреты не заданы, шаг молча пропускается и пайплайн не падает.
+
+### Создание бота и получение chat_id
+
+1. В Telegram открой **@BotFather** → `/newbot` → получи **токен** (`123456:ABC...`).
+2. Напиши своему боту любое сообщение (или добавь его в группу/канал админом).
+3. Открой `https://api.telegram.org/bot<TOKEN>/getUpdates` — найди `"chat":{"id":123456789` — это **chat_id** (для каналов/групп начинается с `-`).
+
+### Куда прописать секреты
+
+- **GitHub Actions**: Settings → Secrets and variables → Actions → New repository secret: `TELEGRAM_TOKEN` и `TELEGRAM_CHAT_ID`.
+- **Jenkins**: Manage Jenkins → Credentials → два **Secret text** с ID `TELEGRAM_TOKEN` и `TELEGRAM_CHAT_ID` (значение chat_id хранится как secret, не в коде). ID можно поменять в `Jenkinsfile` в блоке `withCredentials`.
+
+### Пример сообщения
+
+```
+🟢 PASSED — UI tests
+Repo: L4m4w/getting-started-python
+Branch: master  Commit: d171ba0
+Trigger: push by L4m4w
+
+Total: 7  |  ✅ 7  ❌ 0  ⏭ 0
+
+[Allure report]  |  [CI run]
+```
+
+### Локальная проверка
+
+```bash
+TELEGRAM_TOKEN=... TELEGRAM_CHAT_ID=... \
+REPO=local/test BRANCH=master COMMIT=$(git rev-parse HEAD) \
+TRIGGER="local run" RUN_URL=https://example.com \
+REPORT_URL=https://example.com python notify_telegram.py
+```
+
 Токены, адреса с кредами и id чатов хранятся только в GitHub Secrets / Jenkins Credentials — не в коде.
