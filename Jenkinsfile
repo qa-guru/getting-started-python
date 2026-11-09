@@ -1,5 +1,6 @@
 pipeline {
     // Агенты jenkins.qa.guru с label 'python' — Linux-контейнеры с Python 3.14.
+    // Selenium — чистый Python-пакет, ставится на musl (в отличие от Playwright).
     agent { label 'python-python314-jenkins-agent-1' }
 
     options {
@@ -10,15 +11,20 @@ pipeline {
     }
 
     parameters {
-        choice(name: 'BROWSER', choices: ['chromium', 'firefox', 'webkit'], description: 'Browser engine')
+        choice(name: 'BROWSER', choices: ['chrome', 'firefox'], description: 'Browser')
         string(name: 'BASE_URL', defaultValue: 'https://niffler.qa.guru', description: 'Base URL of the app under test')
         string(name: 'AUTH_URL', defaultValue: 'https://auth.niffler.qa.guru', description: 'Auth service URL')
+        string(name: 'SELENIUM_REMOTE_URL', defaultValue: '', description: 'Selenium Grid/Selenoid URL, e.g. http://selenoid:4444/wd/hub')
     }
 
     environment {
         HEADLESS = 'true'
         BASE_URL = "${params.BASE_URL}"
         AUTH_URL = "${params.AUTH_URL}"
+        SELENIUM_REMOTE = 'true'
+        // Если URL содержит логин/пароль — вместо параметра используй Credentials:
+        // SELENIUM_REMOTE_URL = credentials('selenium-remote-url')
+        SELENIUM_REMOTE_URL = "${params.SELENIUM_REMOTE_URL}"
         VENV = "${WORKSPACE}/.venv"
     }
 
@@ -26,25 +32,11 @@ pipeline {
         stage('Setup') {
             steps {
                 sh '''
-                    uname -a
                     python3 --version
-                    python3 -c "import platform; print(platform.platform()); print('libc:', platform.libc_ver()); print('arch:', platform.machine())"
-                    ldd --version 2>&1 | head -1 || true
-                    pip config list || true
                     python3 -m venv .venv
                     . .venv/bin/activate
                     pip install --upgrade pip
-                    pip debug --verbose 2>/dev/null | grep -A2 "Compatible tags" | head -8 || true
                     pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Browsers') {
-            steps {
-                sh '''
-                    . .venv/bin/activate
-                    playwright install ${BROWSER} --with-deps || playwright install ${BROWSER}
                 '''
             }
         }

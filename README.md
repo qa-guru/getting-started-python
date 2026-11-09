@@ -2,26 +2,37 @@
 
 [![UI Tests](https://github.com/L4m4w/getting-started-python/actions/workflows/tests.yml/badge.svg)](https://github.com/L4m4w/getting-started-python/actions/workflows/tests.yml)
 
-UI-фреймворк автотестирования для [niffler.qa.guru](https://niffler.qa.guru): Python + pytest + Playwright, Page Object, Allure-отчёты.
+UI-фреймворк автотестирования для [niffler.qa.guru](https://niffler.qa.guru): Python + pytest + Selenium, Page Object, Allure-отчёты.
 
 ## Установка
 
 ```bash
 pip install -r requirements.txt
-playwright install chromium
 brew install allure   # для генерации отчётов (требуется Java)
 ```
 
-## Запуск тестов
+Установленные браузер и драйвер не требуются настраивать вручную: Selenium Manager сам подберёт драйвер под установленный Chrome/Firefox.
+
+## Запуск тестов (локально)
 
 ```bash
-pytest                          # все тесты, chromium, headless
-pytest --browser=firefox        # другой движок: chromium | firefox | webkit
-pytest --bversion=131           # метка версии браузера (информационная)
+pytest                          # все тесты, chrome, headless
+pytest --browser=firefox        # другой браузер: chrome | firefox (chromium = алиас chrome)
+pytest --bversion=131           # версия браузера (capability browserVersion, для remote)
 HEADLESS=false pytest           # с открытым окном браузера
 BASE_URL=https://niffler.qa.guru pytest   # переопределить стенд
 AUTH_URL=https://auth.niffler.qa.guru pytest  # переопределить auth-сервис
 ```
+
+## Запуск через Remote WebDriver (Selenium Grid / Selenoid)
+
+```bash
+SELENIUM_REMOTE_URL=http://selenoid-host:4444/wd/hub pytest --browser=chrome
+# либо явно включить remote-режим:
+SELENIUM_REMOTE=true SELENIUM_REMOTE_URL=http://grid:4444/wd/hub pytest
+```
+
+Если `SELENIUM_REMOTE=true`, а `SELENIUM_REMOTE_URL` не задан — прогон падает с понятной ошибкой до старта браузера. В remote-режиме `--bversion` передаётся как capability `browserVersion`.
 
 При падении теста скриншот и page source сохраняются в `artifacts/` и прикладываются к Allure-отчёту.
 
@@ -37,7 +48,7 @@ allure open allure-report
 ## Структура
 
 ```
-conftest.py                 # фикстуры Playwright, CLI-опции, attachments на падении
+conftest.py                 # фикстуры Selenium WebDriver, CLI-опции, attachments на падении
 pages/                      # Page Object: BasePage, LoginPage, MainPage, RegisterPage
 test_niffler_login.py       # тесты авторизации
 test_niffler_registration.py  # тесты регистрации и логаута
@@ -52,18 +63,28 @@ test_niffler_registration.py  # тесты регистрации и логау�
 
 ## Jenkins setup
 
-Пайплайн описан в `Jenkinsfile` (declarative): venv → `playwright install --with-deps` → pytest → публикация Allure-отчёта. Проверено на https://jenkins.qa.guru/ — Jenkinsfile валиден (`Jenkinsfile successfully validated`).
+Пайплайн описан в `Jenkinsfile` (declarative): venv → `pip install -r requirements.txt` → pytest → публикация Allure-отчёта.
 
 ### Требования к ноде
 
-- На https://jenkins.qa.guru/ используются Linux-контейнеры с label `python` (Python 3.14) — Jenkinsfile настроен на `agent { label 'python' }`.
-- Шаг `playwright install ${BROWSER} --with-deps` ставит системные зависимости через `apt`; если на агенте нет root/sudo, выполняется fallback на `playwright install ${BROWSER}` (системные зависимости тогда должны быть в образе агента).
+- На https://jenkins.qa.guru/ используется агент `python-python314-jenkins-agent-1` (Python 3.14, Linux x86_64, musl). Selenium — pure-Python пакет и ставится на musl без проблем (в отличие от Playwright).
+- Браузер на агенте **не** устанавливается — тесты ходят в удалённый Selenium Grid / Selenoid через `webdriver.Remote`.
 - На своём Jenkins замени label на нужный (`agent any` или свой label), но убедись, что агент — Linux с Python ≥ 3.11.
+
+### Обязательные настройки
+
+- **`SELENIUM_REMOTE_URL`** — адрес Grid/Selenoid (например `http://selenoid:4444/wd/hub`). Задаётся параметром билда или env. Если адрес содержит логин/пароль — не храни его в коде и параметрах: создай **Jenkins Credential** (Secret text) и подставь в `environment` пайплайна:
+  ```groovy
+  environment {
+      SELENIUM_REMOTE_URL = credentials('selenium-remote-url')
+  }
+  ```
+- Без `SELENIUM_REMOTE_URL` прогон упадёт с ошибкой «Remote mode requested but SELENIUM_REMOTE_URL is not set».
 
 ### Плагины
 
 - **Pipeline** (workflow-aggregator)
-- **Allure Jenkins Plugin** (Manage Jenkins → Plugins → Allure) — на jenkins.qa.guru уже установлен (есть джобы `*-allure2`/`*-allure3`)
+- **Allure Jenkins Plugin** (Manage Jenkins → Plugins → Allure) — на jenkins.qa.guru уже установлен
 - **Pipeline: Stage View** — опционально, для удобного отображения
 
 ### Настройка Allure CLI
@@ -76,7 +97,7 @@ test_niffler_registration.py  # тесты регистрации и логау�
 1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
 2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
 3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
-4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chromium/firefox/webkit), `BASE_URL`, `AUTH_URL`.
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL`, `SELENIUM_REMOTE_URL`.
 
 ### Поведение
 
@@ -84,4 +105,4 @@ test_niffler_registration.py  # тесты регистрации и логау�
 - Архивируются `allure-results/**` всегда и `artifacts/**` (скриншоты/page source) при падении.
 - История билдов: 20, конкурентные запуски запрещены, таймаут — 20 минут.
 
-Токены и id чатов хранятся только в GitHub Secrets / Jenkins Credentials — не в коде.
+Токены, адреса с кредами и id чатов хранятся только в GitHub Secrets / Jenkins Credentials — не в коде.

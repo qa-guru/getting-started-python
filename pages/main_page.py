@@ -1,5 +1,6 @@
 import allure
-from playwright.sync_api import Page, Locator
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from pages.base_page import BasePage
 
@@ -7,33 +8,20 @@ from pages.base_page import BasePage
 class MainPage(BasePage):
     path = "/main"
 
-    def __init__(self, page: Page):
-        super().__init__(page)
+    spendings_section = (By.CSS_SELECTOR, "#spendings")
+    history_header = (By.CSS_SELECTOR, "#spendings h2")
+    menu_button = (By.CSS_SELECTOR, "button[aria-label='Menu']")
+    sign_out_button = (By.CSS_SELECTOR, "[data-testid='sign-out-btn']")
+    confirm_logout_button = (By.XPATH, "//button[@data-testid='dialog-submit-btn' or normalize-space()='Log out']")
 
-    @property
-    def spendings_section(self) -> Locator:
-        return self.page.locator("#spendings")
-
-    @property
-    def history_header(self) -> Locator:
-        return self.spendings_section.locator("h2")
-
-    @property
-    def menu_button(self) -> Locator:
-        return self.page.locator("button[aria-label='Menu']")
-
-    @property
-    def sign_out_button(self) -> Locator:
-        return self.page.locator("[data-testid='sign-out-btn']")
-
-    @property
-    def confirm_logout_button(self) -> Locator:
-        return self.page.get_by_role("button", name="Log out")
+    def __init__(self, driver: WebDriver):
+        super().__init__(driver)
 
     @allure.step("Выйти из аккаунта")
     def logout(self):
-        self.menu_button.click()
-        self.sign_out_button.click()
-        self.confirm_logout_button.click()
+        # нативный клик chromedriver не открывает MUI-меню в headless — кликаем через JS
+        self.js_click(self.menu_button)
+        self.js_click(self.sign_out_button)
+        self.js_click(self.confirm_logout_button)
         from pages.login_page import LoginPage
-        return LoginPage(self.page)
+        return LoginPage(self.driver)

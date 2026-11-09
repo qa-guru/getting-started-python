@@ -1,5 +1,7 @@
 import allure
-from playwright.sync_api import Page, Locator
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from pages.base_page import BasePage
 from pages.main_page import MainPage
@@ -8,48 +10,34 @@ from pages.main_page import MainPage
 class LoginPage(BasePage):
     path = "/"
 
-    def __init__(self, page: Page):
-        super().__init__(page)
+    username_input = (By.CSS_SELECTOR, "#username")
+    password_input = (By.CSS_SELECTOR, "#password")
+    login_button = (By.CSS_SELECTOR, "#login-button")
+    register_link = (By.CSS_SELECTOR, "#register-button")
+    error_message = (By.CSS_SELECTOR, ".form__error")
 
-    @property
-    def username_input(self) -> Locator:
-        return self.page.locator("#username")
-
-    @property
-    def password_input(self) -> Locator:
-        return self.page.locator("#password")
-
-    @property
-    def login_button(self) -> Locator:
-        return self.page.locator("#login-button")
-
-    @property
-    def register_link(self) -> Locator:
-        return self.page.locator("#register-button")
-
-    @property
-    def error_message(self) -> Locator:
-        return self.page.locator(".form__error")
+    def __init__(self, driver: WebDriver):
+        super().__init__(driver)
 
     @allure.step("Ввести имя пользователя {username}")
     def fill_username(self, username: str):
-        self.username_input.fill(username)
+        self.type_text(self.username_input, username)
         return self
 
     @allure.step("Ввести пароль")
     def fill_password(self, password: str):
-        self.password_input.fill(password)
+        self.type_text(self.password_input, password)
         return self
 
     @allure.step("Нажать кнопку Log in")
     def submit(self) -> MainPage:
-        self.login_button.click()
-        return MainPage(self.page)
+        self.click(self.login_button)
+        return MainPage(self.driver)
 
     @allure.step("Отправить форму логина клавишей Enter")
     def submit_with_enter(self) -> MainPage:
-        self.password_input.press("Enter")
-        return MainPage(self.page)
+        self.find(self.password_input).send_keys(Keys.ENTER)
+        return MainPage(self.driver)
 
     def login(self, username: str, password: str) -> MainPage:
         with allure.step(f"Войти как {username}"):
@@ -61,6 +49,6 @@ class LoginPage(BasePage):
 
     @allure.step("Перейти к регистрации")
     def go_to_register(self):
-        self.register_link.click()
+        self.click(self.register_link)
         from pages.register_page import RegisterPage
-        return RegisterPage(self.page)
+        return RegisterPage(self.driver)

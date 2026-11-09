@@ -7,14 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       browser:
-        description: "Browser engine"
+        description: "Browser"
         required: true
-        default: chromium
+        default: chrome
         type: choice
         options:
-          - chromium
+          - chrome
           - firefox
-          - webkit
 
 permissions:
   contents: write # нужен для деплоя отчёта в gh-pages (peaceiris/actions-gh-pages)
@@ -24,7 +23,7 @@ env:
   AUTH_URL: https://auth.niffler.qa.guru
   HEADLESS: "true"
   ALLURE_VERSION: "2.46.1"
-  BROWSER: ${{ inputs.browser || 'chromium' }}
+  BROWSER: ${{ inputs.browser || 'chrome' }}
 
 jobs:
   test:
@@ -43,10 +42,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Playwright browsers
-        run: playwright install ${{ env.BROWSER }} --with-deps
-        timeout-minutes: 10
-
+      # Chrome и Firefox предустановлены на ubuntu-latest;
+      # драйверы подтягивает Selenium Manager автоматически.
       - name: Run tests
         id: tests
         continue-on-error: true

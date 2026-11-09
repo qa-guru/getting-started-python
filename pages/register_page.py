@@ -1,7 +1,8 @@
 import os
 
 import allure
-from playwright.sync_api import Page, Locator
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from pages.base_page import BasePage
 
@@ -11,8 +12,16 @@ DEFAULT_AUTH_URL = "https://auth.niffler.qa.guru"
 class RegisterPage(BasePage):
     path = "/register"
 
-    def __init__(self, page: Page):
-        super().__init__(page)
+    username_input = (By.CSS_SELECTOR, "#username")
+    password_input = (By.CSS_SELECTOR, "#password")
+    password_submit_input = (By.CSS_SELECTOR, "#passwordSubmit")
+    register_button = (By.CSS_SELECTOR, "#register-button")
+    error_message = (By.CSS_SELECTOR, ".form__error")
+    success_message = (By.CSS_SELECTOR, ".form__paragraph_success")
+    login_link = (By.CSS_SELECTOR, "a.form__link[href='/login']")
+
+    def __init__(self, driver: WebDriver):
+        super().__init__(driver)
 
     @property
     def auth_url(self) -> str:
@@ -20,41 +29,16 @@ class RegisterPage(BasePage):
 
     @allure.step("Открыть страницу регистрации")
     def open(self):
-        self.page.goto(f"{self.auth_url}{self.path}")
+        self.driver.get(f"{self.auth_url}{self.path}")
         return self
-
-    @property
-    def username_input(self) -> Locator:
-        return self.page.locator("#username")
-
-    @property
-    def password_input(self) -> Locator:
-        return self.page.locator("#password")
-
-    @property
-    def password_submit_input(self) -> Locator:
-        return self.page.locator("#passwordSubmit")
-
-    @property
-    def register_button(self) -> Locator:
-        return self.page.locator("#register-button")
-
-    @property
-    def error_message(self) -> Locator:
-        return self.page.locator(".form__error")
-
-    @property
-    def success_message(self) -> Locator:
-        return self.page.locator(".form__paragraph_success")
-
-    @property
-    def login_link(self) -> Locator:
-        return self.page.locator("a.form__link[href='/login']")
 
     @allure.step("Зарегистрировать пользователя {username}")
     def register(self, username: str, password: str, password_submit: str | None = None):
-        self.username_input.fill(username)
-        self.password_input.fill(password)
-        self.password_submit_input.fill(password_submit if password_submit is not None else password)
-        self.register_button.click()
+        self.type_text(self.username_input, username)
+        self.type_text(self.password_input, password)
+        self.type_text(
+            self.password_submit_input,
+            password_submit if password_submit is not None else password,
+        )
+        self.click(self.register_button)
         return self
