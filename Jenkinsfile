@@ -1,6 +1,5 @@
 pipeline {
-    // Агент публикует Allure; Python и браузеры запускаются в glibc-контейнере.
-    // Нужны Docker CLI, доступ к Docker daemon (плагин Docker Pipeline не требуется).
+    // Агенты jenkins.qa.guru с label 'python' — Linux-контейнеры с Python 3.14.
     agent { label 'python-python314-jenkins-agent-1' }
 
     options {
@@ -20,42 +19,44 @@ pipeline {
         HEADLESS = 'true'
         BASE_URL = "${params.BASE_URL}"
         AUTH_URL = "${params.AUTH_URL}"
+        VENV = "${WORKSPACE}/.venv"
     }
 
     stages {
-        stage('Docker availability') {
+        stage('Setup') {
             steps {
                 sh '''
-                    if ! command -v docker >/dev/null 2>&1; then
-                        echo 'Docker CLI is required on the Jenkins agent to run Playwright.' >&2
-                        exit 1
-                    fi
-                    if ! docker info >/dev/null 2>&1; then
-                        echo 'The Jenkins agent needs access to a running Docker daemon.' >&2
-                        exit 1
-                    fi
+                    uname -a
+                    python3 --version
+                    python3 -c "import platform; print(platform.platform()); print('libc:', platform.libc_ver()); print('arch:', platform.machine())"
+                    ldd --version 2>&1 | head -1 || true
+                    pip config list || true
+                    python3 -m venv .venv
+                    . .venv/bin/activate
+                    pip install --upgrade pip
+                    pip debug --verbose 2>/dev/null | grep -A2 "Compatible tags" | head -8 || true
+                    pip install -r requirements.txt
                 '''
             }
         }
 
-        stage('Setup') {
+        stage('Browsers') {
             steps {
                 sh '''
-                    sh ci/run-playwright.sh sh -ec '
-                        python3 --version
-                        python3 -m venv .venv
-                        .venv/bin/python -m pip install -r requirements.txt
-                    '
+                    . .venv/bin/activate
+                    playwright install ${BROWSER} --with-deps || playwright install ${BROWSER}
                 '''
             }
         }
 
         stage('Test') {
             steps {
-                // Браузеры и системные зависимости уже включены в образ.
+                // catchError: падение тестов -> билд UNSTABLE, но pipeline продолжается
+                // и Allure-отчёт генерируется в post-секции.
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                        sh ci/run-playwright.sh .venv/bin/python -m pytest --browser="${BROWSER}" --alluredir=allure-results
+                        . .venv/bin/activate
+                        pytest --browser=${BROWSER} --alluredir=allure-results
                     '''
                 }
             }
