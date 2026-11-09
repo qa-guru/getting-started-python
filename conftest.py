@@ -3,10 +3,13 @@ from pathlib import Path
 
 import allure
 import pytest
+from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.support.ui import WebDriverWait
+
+load_dotenv()
 
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 

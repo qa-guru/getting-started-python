@@ -70,7 +70,18 @@ test_niffler_registration.py  # тесты регистрации и логау�
 ### Требования к ноде
 
 - На https://jenkins.qa.guru/ используется агент `python-python314-jenkins-agent-1` (Python 3.14, Linux x86_64, musl). Selenium — pure-Python пакет и ставится на musl без проблем (в отличие от Playwright).
-- Сейчас пайплайн запускает браузер **локально на агенте** — на нём должен быть установлен Chrome или Firefox (драйвер подберёт Selenium Manager). Если браузера нет, вариант — удалённый запуск: задай в job env `SELENIUM_REMOTE_URL` (например `https://user:pass@selenoid.qa.guru/wd/hub`) — remote-режим включится автоматически. Креды в URL храни через Jenkins Credentials (`withCredentials`), не в коде.
+- Браузера на musl-агенте нет и быть не может — нужен **remote WebDriver**. Адрес с кредами передаётся через файл `.env` (см. ниже) — так же сделано в рабочих джобах qa.guru.
+
+### Remote WebDriver через `.env`
+
+`conftest.py` читает `.env` (`python-dotenv`) — если в нём задан `SELENIUM_REMOTE_URL`, автоматически включается `webdriver.Remote`. `.env` в `.gitignore`, в репозиторий не коммитится.
+
+1. **Manage Jenkins → Managed files → Add a new Config → Custom file** (или credentials-файл, доступный тебе по правам) — содержимое:
+   ```
+   SELENIUM_REMOTE_URL=https://user:pass@selenoid.qa.guru/wd/hub
+   ```
+2. В джобе: **Build Environment → Provide Configuration files** → выбрать этот файл, target — `.env`. Jenkins положит его в workspace до шага сборки (`Creating/updating file at '.env'`).
+3. Локально то же самое: создай `.env` в корне проекта с той же строкой — `pytest` пойдёт в remote.
 - На своём Jenkins замени label на нужный (`agent any` или свой label), но убедись, что агент — Linux с Python ≥ 3.11.
 
 ### Плагины
