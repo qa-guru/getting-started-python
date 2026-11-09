@@ -1,6 +1,6 @@
 pipeline {
     // Агент публикует Allure; Python и браузеры запускаются в glibc-контейнере.
-    // Нужны Docker CLI, доступ к Docker daemon и плагин Docker Pipeline.
+    // Нужны Docker CLI, доступ к Docker daemon (плагин Docker Pipeline не требуется).
     agent { label 'python' }
 
     options {
@@ -38,36 +38,25 @@ pipeline {
             }
         }
 
-        stage('Playwright') {
-            agent {
-                docker {
-                    // Версия образа должна совпадать с playwright в requirements.txt.
-                    image 'mcr.microsoft.com/playwright/python:v1.64.1-noble'
-                    args '--init --ipc=host'
-                    reuseNode true
-                }
+        stage('Setup') {
+            steps {
+                sh '''
+                    sh ci/run-playwright.sh sh -ec '
+                        python3 --version
+                        python3 -m venv .venv
+                        .venv/bin/python -m pip install -r requirements.txt
+                    '
+                '''
             }
-            stages {
-                stage('Setup') {
-                    steps {
-                        sh '''
-                            python3 --version
-                            python3 -m venv .venv
-                            .venv/bin/python -m pip install -r requirements.txt
-                        '''
-                    }
-                }
+        }
 
-                stage('Test') {
-                    steps {
-                        // Браузеры и системные зависимости уже включены в образ.
-                        // Падение тестов не мешает публикации Allure на исходном агенте.
-                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                            sh '''
-                                .venv/bin/python -m pytest --browser="${BROWSER}" --alluredir=allure-results
-                            '''
-                        }
-                    }
+        stage('Test') {
+            steps {
+                // Браузеры и системные зависимости уже включены в образ.
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    sh '''
+                        sh ci/run-playwright.sh .venv/bin/python -m pytest --browser="${BROWSER}" --alluredir=allure-results
+                    '''
                 }
             }
         }

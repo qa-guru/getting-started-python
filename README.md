@@ -60,12 +60,11 @@ test_niffler_registration.py  # тесты регистрации и логау�
 - Установка зависимостей и тесты выполняются в `mcr.microsoft.com/playwright/python:v1.64.1-noble` (Ubuntu/glibc). Версия образа должна совпадать с `playwright` в `requirements.txt`.
 - Браузеры Chromium, Firefox, WebKit и системные зависимости уже включены в образ; отдельный `playwright install` не нужен.
 - Исходный агент может использовать musl: Python из него для тестов не используется. Для генерации Allure-отчёта на исходном агенте нужны Java и настроенный Allure CLI.
-- Контейнер использует тот же workspace (`reuseNode true`), поэтому Allure-результаты и скриншоты доступны после тестов. Docker daemon должен иметь доступ к workspace агента, в том числе когда сам агент работает в контейнере.
+- Контейнер запускается через `docker run` в `ci/run-playwright.sh`; плагин Docker Pipeline не требуется. Для контейнерного агента используются его тома (`--volumes-from`), если агент виден тому же Docker daemon, иначе — bind mount workspace. Workspace должен быть общим с Docker-контейнером, чтобы Allure-результаты и скриншоты были доступны на исходном агенте.
 
 ### Плагины
 
 - **Pipeline** (workflow-aggregator)
-- **Docker Pipeline** (docker-workflow) — обязателен для запуска стадии в Docker
 - **Allure Jenkins Plugin** (Manage Jenkins → Plugins → Allure) — на jenkins.qa.guru уже установлен (есть джобы `*-allure2`/`*-allure3`)
 - **Pipeline: Stage View** — опционально, для удобного отображения
 
