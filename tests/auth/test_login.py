@@ -59,3 +59,47 @@ class TestLogin:
             error = login_page.error_text()
             assert error in BAD_CREDENTIALS_ERRORS, \
                 f"Ожидался один из текстов {BAD_CREDENTIALS_ERRORS!r}, получен {error!r}"
+
+    @allure.story("Невалидные креды")
+    @allure.severity(allure.severity_level.NORMAL)
+    @allure.title("Логин незарегистрированного пользователя показывает ошибку")
+    def test_unregistered_user_login(self, driver, settings, new_user):
+        with allure.step("Открыть страницу логина"):
+            login_page = LoginPage(driver, settings).open()
+
+        with allure.step("Отправить форму с данными незарегистрированного пользователя"):
+            login_page.fill_username(new_user.username) \
+                .fill_password(new_user.password) \
+                .submit()
+
+        with allure.step("Проверить текст ошибки"):
+            error = login_page.error_text()
+            assert error in BAD_CREDENTIALS_ERRORS, \
+                f"Ожидался один из текстов {BAD_CREDENTIALS_ERRORS!r}, получен {error!r}"
+
+    @allure.story("Успешный логин")
+    @allure.severity(allure.severity_level.CRITICAL)
+    @allure.title("Успешный логин после исправления неверного пароля")
+    def test_success_login_after_wrong_password(self, driver, settings, existing_user):
+        with allure.step("Открыть страницу логина"):
+            login_page = LoginPage(driver, settings).open()
+
+        with allure.step("Отправить форму с неверным паролем"):
+            login_page.fill_username(existing_user.username) \
+                .fill_password(WRONG_PASSWORD) \
+                .submit()
+
+        with allure.step("Проверить ошибку перед повторным входом"):
+            error = login_page.error_text()
+            assert error in BAD_CREDENTIALS_ERRORS, \
+                f"Ожидался один из текстов {BAD_CREDENTIALS_ERRORS!r}, получен {error!r}"
+
+        with allure.step("Повторить вход с верными данными в той же форме"):
+            main_page = login_page.login(
+                existing_user.username, existing_user.password
+            )
+
+        with allure.step("Проверить заголовок истории трат"):
+            header = main_page.history_header_text()
+            assert header == HISTORY_HEADER_TEXT, \
+                f"Ожидался заголовок {HISTORY_HEADER_TEXT!r}, получен {header!r}"
