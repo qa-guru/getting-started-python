@@ -15,6 +15,7 @@ pipeline {
         string(name: 'BASE_URL', defaultValue: 'https://niffler.qa.guru', description: 'Base URL of the app under test')
         string(name: 'AUTH_URL', defaultValue: 'https://auth.niffler.qa.guru', description: 'Auth service URL')
         credentials(name: 'SELENOID_CREDENTIALS_ID', credentialType: 'Username with password', required: true, description: 'Credential с логином/токеном для selenoid.qa.guru (user-scope тоже виден в списке)')
+        credentials(name: 'EXISTING_USER_CREDENTIALS_ID', credentialType: 'Username with password', required: true, description: 'Credential с логином/паролем зарегистрированного тестового пользователя стенда')
     }
 
     environment {
@@ -44,11 +45,18 @@ pipeline {
                 // и Allure-отчёт генерируется в post-секции.
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     // Креды подставляются в URL только внутри шага и маскируются в логах
-                    withCredentials([usernamePassword(
-                        credentialsId: "${params.SELENOID_CREDENTIALS_ID}",
-                        usernameVariable: 'SELENOID_USER',
-                        passwordVariable: 'SELENOID_PASS'
-                    )]) {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: "${params.SELENOID_CREDENTIALS_ID}",
+                            usernameVariable: 'SELENOID_USER',
+                            passwordVariable: 'SELENOID_PASS'
+                        ),
+                        usernamePassword(
+                            credentialsId: "${params.EXISTING_USER_CREDENTIALS_ID}",
+                            usernameVariable: 'EXISTING_USERNAME',
+                            passwordVariable: 'EXISTING_PASSWORD'
+                        )
+                    ]) {
                         sh '''
                             . .venv/bin/activate
                             export SELENIUM_REMOTE_URL="https://${SELENOID_USER}:${SELENOID_PASS}@selenoid.qa.guru/wd/hub"

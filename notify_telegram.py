@@ -1,8 +1,8 @@
 """Send a Telegram notification with test-run summary.
 
-Reads counters from allure-results/*-result.json, formats a Markdown
-message and posts it via the Bot API. Silently exits 0 when
-TELEGRAM_TOKEN / TELEGRAM_CHAT_ID are not configured, so pipelines
+CLI entry point for GitHub Actions and Jenkins. Statistics collection
+and message logic live in infrastructure/reporting/. Silently exits 0
+when TELEGRAM_TOKEN / TELEGRAM_CHAT_ID are not configured, so pipelines
 without secrets keep working.
 
 Configuration via environment variables:
@@ -17,24 +17,12 @@ Configuration via environment variables:
     REPORT_URL       — link to the Allure report
 """
 
-import json
 import os
 import sys
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
-
-def collect_stats(result_dir: Path) -> dict:
-    stats = {"passed": 0, "failed": 0, "broken": 0, "skipped": 0}
-    for path in result_dir.glob("*-result.json"):
-        try:
-            status = json.loads(path.read_text()).get("status")
-        except (json.JSONDecodeError, OSError):
-            continue
-        if status in stats:
-            stats[status] += 1
-    return stats
+from infrastructure.reporting.stats import collect_stats
+from infrastructure.reporting.telegram import format_message, send_message
 
 
 def main() -> int:
@@ -45,43 +33,18 @@ def main() -> int:
         return 0
 
     stats = collect_stats(Path(os.environ.get("RESULT_DIR", "allure-results")))
-    failed = stats["failed"] + stats["broken"]
-    total = sum(stats.values())
-
-    icon = "🟢" if failed == 0 else "🔴"
-    result = "PASSED" if failed == 0 else "FAILED"
-    commit = os.environ.get("COMMIT", "")[:7]
-
-    lines = [
-        f"{icon} *{result}* — UI tests",
-        f"Repo: `{os.environ.get('REPO', '?')}`",
-        f"Branch: `{os.environ.get('BRANCH', '?')}`  Commit: `{commit}`",
-        f"Trigger: {os.environ.get('TRIGGER', '?')}",
-        "",
-        f"Total: {total}  |  ✅ {stats['passed']}  ❌ {failed}  ⏭ {stats['skipped']}",
-    ]
-    links = []
-    if os.environ.get("REPORT_URL"):
-        links.append(f"[Allure report]({os.environ['REPORT_URL']})")
-    if os.environ.get("RUN_URL"):
-        links.append(f"[CI run]({os.environ['RUN_URL']})")
-    if links:
-        lines += ["", "  |  ".join(links)]
-
-    payload = {
-        "chat_id": chat_id,
-        "text": "\n".join(lines),
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True,
-    }
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+    text = format_message(
+        stats,
+        repo=os.environ.get("REPO", "?"),
+        branch=os.environ.get("BRANCH", "?"),
+        commit=os.environ.get("COMMIT", "")[:7],
+        trigger=os.environ.get("TRIGGER", "?"),
+        report_url=os.environ.get("REPORT_URL", ""),
+        run_url=os.environ.get("RUN_URL", ""),
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            print(f"Telegram notification sent: HTTP {resp.status}")
+        status = send_message(token, chat_id, text)
+        print(f"Telegram notification sent: HTTP {status}")
     except Exception as exc:  # notification must never fail the build
         print(f"Telegram notification failed: {exc}")
     return 0

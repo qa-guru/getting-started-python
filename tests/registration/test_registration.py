@@ -1,13 +1,12 @@
-import uuid
-
 import allure
-from selenium.webdriver.support import expected_conditions as EC
 
 from pages.register_page import RegisterPage
-
-
-def _unique_username() -> str:
-    return f"user_{uuid.uuid4().hex[:10]}"
+from test_data.consts.registration import (
+    MISMATCHED_PASSWORD_SUFFIX,
+    PASSWORDS_MISMATCH_ERROR,
+    REGISTRATION_SUCCESS_MESSAGE,
+    USERNAME_TAKEN_ERROR_TEMPLATE,
+)
 
 
 @allure.epic("Niffler")
@@ -17,36 +16,49 @@ class TestRegistration:
     @allure.story("Успешная регистрация")
     @allure.severity(allure.severity_level.BLOCKER)
     @allure.title("Регистрация нового пользователя")
-    def test_successful_registration(self, driver, wait):
-        register_page = RegisterPage(driver).open()
-        register_page.register(_unique_username(), "12345")
+    def test_successful_registration(self, driver, settings, new_user):
+        with allure.step("Открыть страницу регистрации"):
+            register_page = RegisterPage(driver, settings).open()
+
+        with allure.step("Зарегистрировать нового пользователя"):
+            register_page.register(new_user.username, new_user.password)
 
         with allure.step("Проверить сообщение об успешной регистрации"):
-            wait.until(EC.text_to_be_present_in_element(
-                register_page.success_message,
-                "Congratulations! You've registered!",
-            ))
+            message = register_page.success_message_text()
+            assert message == REGISTRATION_SUCCESS_MESSAGE, \
+                f"Ожидалось сообщение {REGISTRATION_SUCCESS_MESSAGE!r}, получено {message!r}"
 
     @allure.story("Валидация")
     @allure.severity(allure.severity_level.NORMAL)
     @allure.title("Несовпадающие пароли показывают ошибку")
-    def test_registration_with_mismatched_passwords(self, driver, wait):
-        register_page = RegisterPage(driver).open()
-        register_page.register(_unique_username(), "12345", password_submit="54321")
+    def test_registration_with_mismatched_passwords(self, driver, settings, new_user):
+        with allure.step("Открыть страницу регистрации"):
+            register_page = RegisterPage(driver, settings).open()
+
+        with allure.step("Отправить форму с несовпадающими паролями"):
+            register_page.register(
+                new_user.username,
+                new_user.password,
+                password_submit=new_user.password + MISMATCHED_PASSWORD_SUFFIX,
+            )
 
         with allure.step("Проверить текст ошибки"):
-            wait.until(EC.text_to_be_present_in_element(
-                register_page.error_message, "Passwords should be equal"
-            ))
+            error = register_page.error_text()
+            assert error == PASSWORDS_MISMATCH_ERROR, \
+                f"Ожидалась ошибка {PASSWORDS_MISMATCH_ERROR!r}, получена {error!r}"
 
     @allure.story("Валидация")
     @allure.severity(allure.severity_level.NORMAL)
     @allure.title("Занятое имя пользователя показывает ошибку")
-    def test_registration_with_existing_username(self, driver, wait):
-        register_page = RegisterPage(driver).open()
-        register_page.register("stas", "12345")
+    def test_registration_with_existing_username(self, driver, settings, existing_user, new_user):
+        with allure.step("Открыть страницу регистрации"):
+            register_page = RegisterPage(driver, settings).open()
+
+        with allure.step("Отправить форму с занятым именем пользователя"):
+            register_page.register(existing_user.username, new_user.password)
 
         with allure.step("Проверить текст ошибки"):
-            wait.until(EC.text_to_be_present_in_element(
-                register_page.error_message, "Username `stas` already exists"
-            ))
+            error = register_page.error_text()
+            expected = USERNAME_TAKEN_ERROR_TEMPLATE.format(existing_user.username)
+            assert error == expected, \
+                f"Ожидалась ошибка {expected!r}, получена {error!r}"
