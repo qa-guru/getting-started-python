@@ -1,12 +1,7 @@
-import os
-
 import allure
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
 
 from pages.base_page import BasePage
-
-DEFAULT_AUTH_URL = "https://auth.niffler.qa.guru"
 
 
 class RegisterPage(BasePage):
@@ -20,20 +15,13 @@ class RegisterPage(BasePage):
     success_message = (By.CSS_SELECTOR, ".form__paragraph_success")
     login_link = (By.CSS_SELECTOR, "a.form__link[href='/login']")
 
-    def __init__(self, driver: WebDriver):
-        super().__init__(driver)
-
-    @property
-    def auth_url(self) -> str:
-        return os.getenv("AUTH_URL", DEFAULT_AUTH_URL).rstrip("/")
-
     @allure.step("Открыть страницу регистрации")
-    def open(self):
-        self.driver.get(f"{self.auth_url}{self.path}")
+    def open(self) -> "RegisterPage":
+        self.driver.get(f"{self.settings.auth_url}{self.path}")
         return self
 
     @allure.step("Зарегистрировать пользователя {username}")
-    def register(self, username: str, password: str, password_submit: str | None = None):
+    def register(self, username: str, password: str, password_submit: str | None = None) -> "RegisterPage":
         self.type_text(self.username_input, username)
         self.type_text(self.password_input, password)
         self.type_text(
@@ -42,3 +30,13 @@ class RegisterPage(BasePage):
         )
         self.click(self.register_button)
         return self
+
+    @allure.step("Получить текст ошибки")
+    def error_text(self) -> str:
+        error = self.find(self.error_message)
+        self.wait.until(lambda _: error.text.strip() != "")
+        return error.text.strip()
+
+    @allure.step("Получить сообщение об успешной регистрации")
+    def success_message_text(self) -> str:
+        return self.find(self.success_message).text.strip()

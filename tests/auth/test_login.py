@@ -1,10 +1,8 @@
 import allure
-from selenium.webdriver.support import expected_conditions as EC
 
 from pages.login_page import LoginPage
-
-USERNAME = "stas"
-PASSWORD = "12345"
+from test_data.consts.auth import BAD_CREDENTIALS_ERRORS, WRONG_PASSWORD
+from test_data.consts.main_page import HISTORY_HEADER_TEXT
 
 
 @allure.epic("Niffler")
@@ -14,35 +12,50 @@ class TestLogin:
     @allure.story("Успешный логин")
     @allure.severity(allure.severity_level.BLOCKER)
     @allure.title("Логин с валидными кредами")
-    def test_success_login(self, driver, wait):
-        main_page = LoginPage(driver).open().login(USERNAME, PASSWORD)
+    def test_success_login(self, driver, settings, existing_user):
+        with allure.step("Открыть страницу логина"):
+            login_page = LoginPage(driver, settings).open()
+
+        with allure.step("Войти под существующим пользователем"):
+            main_page = login_page.login(
+                existing_user.username, existing_user.password
+            )
 
         with allure.step("Проверить заголовок истории трат"):
-            wait.until(EC.text_to_be_present_in_element(
-                main_page.spendings_section, "History of Spendings"
-            ))
+            header = main_page.history_header_text()
+            assert header == HISTORY_HEADER_TEXT, \
+                f"Ожидался заголовок {HISTORY_HEADER_TEXT!r}, получен {header!r}"
 
     @allure.story("Успешный логин")
     @allure.severity(allure.severity_level.CRITICAL)
     @allure.title("Логин с отправкой формы клавишей Enter")
-    def test_success_login_with_press_enter(self, driver, wait):
-        main_page = LoginPage(driver).open().login_with_enter(USERNAME, PASSWORD)
+    def test_success_login_with_press_enter(self, driver, settings, existing_user):
+        with allure.step("Открыть страницу логина"):
+            login_page = LoginPage(driver, settings).open()
+
+        with allure.step("Войти под существующим пользователем через Enter"):
+            main_page = login_page.login_with_enter(
+                existing_user.username, existing_user.password
+            )
 
         with allure.step("Проверить заголовок истории трат"):
-            wait.until(EC.text_to_be_present_in_element(
-                main_page.spendings_section, "History of Spendings"
-            ))
+            header = main_page.history_header_text()
+            assert header == HISTORY_HEADER_TEXT, \
+                f"Ожидался заголовок {HISTORY_HEADER_TEXT!r}, получен {header!r}"
 
     @allure.story("Невалидные креды")
     @allure.severity(allure.severity_level.NORMAL)
     @allure.title("Логин с неверным паролем показывает ошибку")
-    def test_wrong_credentials(self, driver, wait):
-        login_page = LoginPage(driver).open()
-        login_page.fill_username(USERNAME).fill_password("12345sgsrgwr").submit_with_enter()
+    def test_wrong_credentials(self, driver, settings, existing_user):
+        with allure.step("Открыть страницу логина"):
+            login_page = LoginPage(driver, settings).open()
+
+        with allure.step("Отправить форму с неверным паролем"):
+            login_page.fill_username(existing_user.username) \
+                .fill_password(WRONG_PASSWORD) \
+                .submit_with_enter()
 
         with allure.step("Проверить текст ошибки"):
-            # текст ошибки зависит от локали браузера (ru/en)
-            error = wait.until(EC.visibility_of_element_located(login_page.error_message))
-            wait.until(lambda _: error.text.strip() != "")
-            assert error.text in ("Bad credentials", "Неверные учетные данные пользователя"), \
-                f"Unexpected error text: {error.text!r}"
+            error = login_page.error_text()
+            assert error in BAD_CREDENTIALS_ERRORS, \
+                f"Ожидался один из текстов {BAD_CREDENTIALS_ERRORS!r}, получен {error!r}"

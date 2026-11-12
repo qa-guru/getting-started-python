@@ -24,6 +24,10 @@ env:
   HEADLESS: "true"
   ALLURE_VERSION: "2.46.1"
   BROWSER: ${{ inputs.browser || 'chrome' }}
+  # Креды заранее зарегистрированного тестового пользователя (логин/логаут/
+  # занятое имя). Заводятся в Settings → Secrets → Actions.
+  EXISTING_USERNAME: ${{ secrets.EXISTING_USERNAME }}
+  EXISTING_PASSWORD: ${{ secrets.EXISTING_PASSWORD }}
 
 jobs:
   test:

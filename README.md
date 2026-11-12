@@ -9,7 +9,7 @@ UI-фреймворк автотестирования для [niffler.qa.guru](
 ```bash
 pip install -r requirements.txt
 brew install allure   # для генерации отчётов (требуется Java)
-cp .env.example .env  # опционально: локальные настройки (стенд, браузер, Selenoid)
+cp .env.example .env  # локальные настройки (стенд, браузер, Selenoid) и креды тестового пользователя
 ```
 
 Установленные браузер и драйвер не требуются настраивать вручную: Selenium Manager сам подберёт драйвер под установленный Chrome/Firefox.
@@ -39,6 +39,16 @@ SELENIUM_REMOTE=true SELENIUM_REMOTE_URL=http://grid:4444/wd/hub pytest
 
 При падении теста скриншот и page source сохраняются в `artifacts/` и прикладываются к Allure-отчёту.
 
+## Тестовые данные
+
+Тестам логина, логаута и регистрации с занятым именем нужен **заранее зарегистрированный** пользователь стенда (API управления пользователями у стенда нет, создавать его тесты не умеют). Креды читаются из окружения — в `.env` или в shell:
+
+```bash
+EXISTING_USERNAME=stas EXISTING_PASSWORD=12345 pytest
+```
+
+Без этих переменных соответствующие тесты падают на этапе подготовки с `MissingTestDataError`, где перечислены недостающие переменные. Тесты регистрации новых пользователей используют фикстуру `new_user` (генерация уникальных кредов) и внешних данных не требуют; созданные пользователи на стенде не удаляются.
+
 ## Allure-отчёт
 
 ```bash
@@ -51,17 +61,25 @@ allure open allure-report
 ## Структура
 
 ```
-conftest.py                 # фикстуры Selenium WebDriver, CLI-опции, attachments на падении
+conftest.py                 # фикстуры driver/settings, CLI-опции, хук attachments на падении
+settings.py                 # Settings + load_settings: приоритет CLI > env > дефолты
+infrastructure/             # общие helpers
+  browser/factory.py        # create_driver: Remote / Chrome / Firefox по Settings
+  waits/element_waits.py    # ElementWaits: общие явные ожидания для Page Object
+  reporting/                # артефакты падения, статистика Allure, Telegram
 pages/                      # Page Object: BasePage, LoginPage, MainPage, RegisterPage
+test_data/                  # UserCredentials, генерация юзеров (utils/), фикстуры данных
 tests/                      # тесты по фичам
   auth/test_login.py        # авторизация
   registration/test_registration.py  # регистрация и валидация формы
   logout/test_logout.py     # выход из аккаунта
+  unit/                     # unit-тесты инфраструктуры (settings, browser, conftest)
 ```
 
 ## CI
 
 - GitHub Actions: `.github/workflows/tests.yml` — прогон на push в `master`, PR и вручную (выбор браузера). Allure-отчёт сохраняется как artifact и публикуется в GitHub Pages (ветка `gh-pages`): https://L4m4w.github.io/getting-started-python/
+- Обязательные GitHub Secrets для прогона: `EXISTING_USERNAME` и `EXISTING_PASSWORD` (креды зарегистрированного тестового пользователя стенда). Без них тесты логина/логаута падают с `MissingTestDataError`.
 - Jenkins: `Jenkinsfile`
 
 Для публикации отчёта в форке включи GitHub Pages: **Settings → Pages → Source: Deploy from a branch → gh-pages**. Если репозиторий форкнут — замени `L4m4w/getting-started-python` в бейдже и ссылке на свой `<owner>/<repo>`.
@@ -78,6 +96,7 @@ tests/                      # тесты по фичам
 ### Обязательные настройки
 
 - **`SELENOID_CREDENTIALS_ID`** — параметр типа **Credentials** в джобе: при запуске выбираешь свой credential (**Username with password**: username — логин, password — токен Selenoid). Работает и с user-scoped кредами — System-доступ не нужен. Пайплайн через `withCredentials` собирает `https://user:token@selenoid.qa.guru/wd/hub` внутри шага — креды не попадают в код и маскируются в логах.
+- **`EXISTING_USER_CREDENTIALS_ID`** — параметр типа **Credentials** (Username with password) с кредами заранее зарегистрированного тестового пользователя стенда: username → `EXISTING_USERNAME`, password → `EXISTING_PASSWORD`.
 
 ### Remote-режим локально
 
@@ -104,7 +123,7 @@ SELENIUM_REMOTE_URL=https://user:token@selenoid.qa.guru/wd/hub
 1. **New Item → Pipeline** → имя (например `niffler-ui-tests`).
 2. В разделе **Pipeline**: Definition = **Pipeline script from SCM**.
 3. SCM = **Git**, Repository URL — `https://github.com/L4m4w/getting-started-python.git` (или свой форк), Branch — `*/master`, Script Path — `Jenkinsfile`.
-4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL` и credential `SELENOID_CREDENTIALS_ID` из выпадающего списка (включая user-scoped).
+4. Сохранить → **Build with Parameters**: выбор `BROWSER` (chrome/firefox), `BASE_URL`, `AUTH_URL` и credentials `SELENOID_CREDENTIALS_ID` + `EXISTING_USER_CREDENTIALS_ID` из выпадающего списка (включая user-scoped).
 
 ### Поведение
 

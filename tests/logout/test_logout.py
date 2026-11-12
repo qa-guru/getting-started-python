@@ -1,5 +1,4 @@
 import allure
-from selenium.webdriver.support import expected_conditions as EC
 
 from pages.login_page import LoginPage
 
@@ -11,9 +10,11 @@ class TestLogout:
     @allure.story("Логаут")
     @allure.severity(allure.severity_level.CRITICAL)
     @allure.title("Выход возвращает на форму логина")
-    def test_logout(self, driver, wait):
-        main_page = LoginPage(driver).open().login("stas", "12345")
-        login_page = main_page.logout()
+    def test_logout(self, driver, settings, existing_user):
+        with allure.step("Логаут из существующего пользователя"):
+            login_page = LoginPage(driver, settings).open()
+            main_page = login_page.login(existing_user.username, existing_user.password)
+            login_page = main_page.logout()
 
         with allure.step("Проверить, что отображается форма логина"):
-            wait.until(EC.visibility_of_element_located(login_page.login_button))
+            login_page.wait_until_open()
