@@ -16,6 +16,25 @@ cp .env.example .env  # локальные настройки (стенд, бр�
 
 ## Запуск тестов (локально)
 
+Для работы агента и единообразной локальной проверки добавлен проектный harness:
+
+```sh
+sh tools/versions.sh                  # Python и зависимости из requirements.txt
+sh tools/compile-tests.sh             # компиляция кода и сбор тестов, без браузера
+sh tools/run-tests.sh list            # актуальные pytest node ID
+sh tools/run-tests.sh group unit      # unit-тесты без обращения к стенду
+sh tools/run-tests.sh --allow-sut group auth --browser chrome
+```
+
+`--allow-sut` используется после разрешения на выбранный стенд и операции.
+Интерпретатор: `PYTHON` → `.venv/bin/python` → `python3`.
+Материалы каждого прогона harness — `artifacts/harness/run-*/`.
+Подробности: [запуск](knowledge/testing/run-tests.md),
+[архитектура](knowledge/architecture/overview.md),
+[диагностика](knowledge/testing/debugging.md).
+Проектные skills находятся в `.agents/skills/`; если клиент не обнаруживает
+их автоматически, агент читает нужный `SKILL.md` по ссылкам из `AGENTS.md`.
+
 ```bash
 pytest                          # все тесты, chrome, headless
 pytest --browser=firefox        # другой браузер: chrome | firefox (chromium = алиас chrome)

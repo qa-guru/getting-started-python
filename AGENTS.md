@@ -3,6 +3,27 @@
 UI-автотесты для niffler.qa.guru: Python 3.13 + pytest + Selenium,
 Page Object, Allure.
 
+## Навигация и локальный harness
+
+- Карта архитектуры и жизненного цикла: `knowledge/architecture/overview.md`.
+- Команды, окружение, scope и материалы прогонов: `knowledge/testing/run-tests.md`.
+- Диагностика: `knowledge/testing/debugging.md`.
+- GitHub Actions: `knowledge/integrations/ci-github.md`.
+- Локальные skills: `.agents/skills/run-tests/SKILL.md`,
+  `.agents/skills/create-ui-test/SKILL.md`, `.agents/skills/fix-failing-test/SKILL.md`.
+  Используй подходящий skill для запуска, нового UI-сценария или разбора падения.
+  Если клиент не обнаружил skill автоматически, прочитай файл напрямую;
+  наличие файла само по себе не доказывает его загрузку клиентом.
+- Проверки: `sh tools/versions.sh`, `sh tools/compile-tests.sh`;
+  актуальные node ID: `sh tools/run-tests.sh list`.
+- Unit: `sh tools/run-tests.sh group unit`; UI: `sh tools/run-tests.sh --allow-sut
+  group auth`. `--allow-sut` подтверждает уже разрешённый доступ и выбранные
+  операции, включая записи регистрации; учитывай разрешение из текущей задачи.
+- Эти скрипты не устанавливают зависимости, не запускают CI и не включают
+  TestOps. Не запускай внешние операции только ради проверки harness.
+- После изменения общего компонента используй каталог ниже; не дублируй
+  описания импортов в архитектурной документации или skills.
+
 ## Запуск
 - `pytest` — все тесты (chrome, headless по умолчанию)
 - `pytest --browser=firefox`, `HEADLESS=false pytest`

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Create Niffler UI test"
+  short_description: "UI-сценарии Niffler через Page Object и Allure"

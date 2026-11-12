@@ -1,0 +1,3 @@
+interface:
+  display_name: "Run Niffler tests"
+  short_description: "Запуск unit и UI-тестов Niffler с отчётом"

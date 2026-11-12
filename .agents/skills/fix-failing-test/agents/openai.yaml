@@ -1,0 +1,3 @@
+interface:
+  display_name: "Fix Niffler test"
+  short_description: "Диагностика и исправление падающих тестов Niffler"
